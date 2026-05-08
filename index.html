@@ -159,6 +159,68 @@ main{padding:20px 24px 40px;max-width:1800px;margin:0 auto}
   gap:16px;
 }
 
+/* ===== QUADRANT VIEW ===== */
+.quadrant-wrap{display:flex;flex-direction:column;gap:14px}
+.qd-intro{font-size:13px;color:#cbd5e1;line-height:1.5;background:#0d1117;padding:12px 16px;border-radius:8px;border:1px solid #2c3447}
+.qd-legend{font-size:11px;color:var(--mgrey);font-style:italic;margin-top:4px}
+.qd-grid{
+  display:grid;
+  grid-template-columns:140px 1fr 1fr;
+  grid-template-rows:auto 1fr 1fr;
+  gap:10px;
+}
+.qd-corner{}
+.qd-col-hdr,.qd-row-hdr{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:8px 12px;color:#e2e8f0;text-align:center;
+}
+.qd-row-hdr{align-items:flex-end;text-align:right;padding-right:14px}
+.qd-axis{font-size:13px;font-weight:700;letter-spacing:0.5px}
+.qd-sub{font-size:10px;color:var(--mgrey);font-style:italic;margin-top:2px;line-height:1.3}
+.qd-cell{
+  background:#0d1117;border:1px solid #2c3447;border-top:4px solid var(--qd-color);
+  border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;min-height:280px;
+}
+.qd-cell-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.qd-cell-title{font-size:14px;font-weight:800;color:var(--qd-color);letter-spacing:0.5px}
+.qd-cell-count{font-size:11px;color:var(--mgrey);font-family:"SF Mono","Menlo",monospace}
+.qd-cell-desc{font-size:11px;color:#94a3b8;line-height:1.4;margin:6px 0 12px;padding-bottom:10px;border-bottom:1px solid #1e2632}
+.qd-rows{display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:520px}
+.qd-empty{font-size:11px;color:var(--mgrey);font-style:italic;text-align:center;padding:24px 0}
+.qd-row{
+  display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;
+  padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .12s;
+}
+.qd-row:hover{background:#1a2030}
+.qd-row-type{
+  width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:#fff;background:#475569;
+}
+.qd-row-type.type-101{background:#1e88e5}
+.qd-row-type.type-103{background:#43a047}
+.qd-row-type.type-104{background:#fb8c00}
+.qd-row-type.type-106{background:#8e24aa}
+.qd-row-type.type-111{background:#e53935}
+.qd-row-type.type-113{background:#fb8c00}
+.qd-row-type.type-114{background:#00897b}
+.qd-row-type.type-115{background:#00897b}
+.qd-row-type.type-118{background:#6d4c41}
+.qd-row-type.type-127{background:#5e35b1}
+.qd-row-type.type-129{background:#fb8c00}
+.qd-row-type.type-133{background:#00acc1}
+.qd-row-main{min-width:0}
+.qd-row-name{font-size:12px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qd-row-meta{font-size:10px;color:var(--mgrey);margin-top:2px}
+.qd-row-iwar{font-size:14px;font-weight:800;font-family:"SF Mono","Menlo",monospace}
+.qd-row-iwar.positive{color:var(--green)}
+.qd-row-iwar.negative{color:var(--red)}
+.qd-row-iwar.neutral{color:#94a3b8}
+@media(max-width:920px){
+  .qd-grid{grid-template-columns:1fr;grid-template-rows:none}
+  .qd-corner,.qd-col-hdr{display:none}
+  .qd-row-hdr{align-items:flex-start;text-align:left;padding:8px 0 0}
+}
+
 /* ===== CARD (grid) ===== */
 .card{
   background:var(--paper);color:#1a1f2e;border-radius:10px;overflow:hidden;
@@ -470,7 +532,13 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
     <option value="position">Course order</option>
     <option value="iwar_desc">iWAR (high to low)</option>
     <option value="iwar_asc">iWAR (low to high)</option>
+    <option value="roi_desc">Rebuild ROI (high to low)</option>
     <option value="completers_desc">Completers (high to low)</option>
+  </select>
+  <label for="view-select">View</label>
+  <select id="view-select">
+    <option value="grid">Grid of cards</option>
+    <option value="quadrants">Quadrant matrix</option>
   </select>
   <span class="stats" id="stats"></span>
 </div>
@@ -519,8 +587,9 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
           </div>
           <div class="card-footer">
             <div class="pos-adj hot" data-zone="effort">Effort <span class="num" id="bf-effort"></span></div>
-            <div class="pos-adj hot" data-zone="audience">Audience <span class="num" id="bf-audience"></span></div>
-            <div class="lev hot" data-zone="leverage">Leverage <span class="num" id="bf-lev"></span></div>
+            <div class="pos-adj hot" data-zone="roi">ROI <span class="num" id="bf-roi"></span></div>
+            <div class="pos-adj hot" data-zone="audience">Aud <span class="num" id="bf-audience"></span></div>
+            <div class="lev hot" data-zone="leverage">Lev <span class="num" id="bf-lev"></span></div>
           </div>
         </div>
         <div class="bigface back">
@@ -566,7 +635,7 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
 // (Application type: Web application; Authorized JavaScript origins:
 //   https://agenesir-coursera.github.io)
 // then paste the client ID here:
-const GOOGLE_CLIENT_ID = '__REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID__.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '272785607118-3gn3ag1v6s08hp2egcfgrddqh88id99s.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'coursera.org';
 const AUTHED_EMAIL_KEY = 'iwar_authed_email_v1';
 
@@ -746,6 +815,15 @@ const TOUR = [
       'What\'s the rebuild ROI (iWAR change per unit of work)?',
       'Is this a quick win or a heavy lift?'
     ] },
+  { zone:'roi', title:'Rebuild ROI · upside per unit of work',
+    body:'<strong>How much iWAR can be recovered per unit of rebuild effort?</strong> Higher = better rebuild candidate.',
+    body2:'Items already at Starter tier or above (iWAR ≥ +1) get ROI = 0 — there\'s no rebuild upside, they\'re working. Negative-iWAR items at low effort (readings, discussions) score highest. Negative-iWAR programming labs (effort 25×) score low even when broken — too expensive to fix relative to the recoverable upside.',
+    formula:'<div class="formula-mini"><span class="h">Rebuild ROI</span> = max(0, 1 − iWAR) / Effort</div>',
+    questions:[
+      'Of the items below replacement, which ones are cheap to fix?',
+      'If I have a fixed rebuild budget, which items recover the most iWAR per dollar?',
+      'Is this a quick win or a money pit?'
+    ] },
   { zone:'audience', title:'Audience · reach factor',
     body:'How big is the audience that actually sees this item? <strong>n_completers / max(n_completers) within the same course.</strong>',
     body2:'1.0 = the most-completed item in the course; 0.4 = an item only 40% as many learners reach. Like Effort, it sits <em>next to</em> iWAR rather than inside it — a strong iWAR on an item only 5% of learners ever touch is a different bet than a strong iWAR on an item every learner sees.',
@@ -776,6 +854,13 @@ function escapeHtml(s) {
 function fmtPlus(v) { return v == null ? '—' : Math.round(v); }
 function fmt2(v) { return v == null ? '—' : v.toFixed(2); }
 function fmtIwar(v) { return v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1); }
+function effortOf(r) { return Math.max(0.1, r.rebuild_effort ?? r.effort_score ?? 1); }
+function rebuildRoi(r) {
+  if (r.iwar == null) return null;
+  const upside = Math.max(0, 1 - r.iwar);   // gap to Starter tier
+  return upside / effortOf(r);              // upside per unit of effort
+}
+function fmtRoi(v) { return v == null ? '—' : v < 0.01 ? '—' : v.toFixed(2); }
 
 function setLocked(locked) {
   const pill = $('lock-status');
@@ -908,16 +993,20 @@ function renderCards() {
   const typeFilter = $('type-select').value;
   if (typeFilter) items = items.filter(r => String(r.type_id) === typeFilter);
 
+  if (items.length === 0) { root.innerHTML = '<div class="empty">No items match the current filter.</div>'; return; }
+
+  const view = $('view-select').value;
+  if (view === 'quadrants') { renderQuadrants(items, courseId); return; }
+
   const sortBy = $('sort-select').value;
   items.sort((a, b) => {
     if (sortBy === 'iwar_desc') return (b.iwar ?? -999) - (a.iwar ?? -999);
     if (sortBy === 'iwar_asc')  return (a.iwar ?? 999) - (b.iwar ?? 999);
+    if (sortBy === 'roi_desc')  return (rebuildRoi(b) ?? -1) - (rebuildRoi(a) ?? -1);
     if (sortBy === 'position')  return (a.item_global_order ?? 0) - (b.item_global_order ?? 0);
     if (sortBy === 'completers_desc') return (b.n_completers ?? 0) - (a.n_completers ?? 0);
     return 0;
   });
-
-  if (items.length === 0) { root.innerHTML = '<div class="empty">No items match the current filter.</div>'; return; }
 
   const courseName = KEY_FILE.courses[courseId]?.name || courseId;
   const grid = document.createElement('div'); grid.className = 'grid';
@@ -953,6 +1042,7 @@ function renderCards() {
       </div></div>
       <div class="footer">
         <span>Eff <span class="pa">${fmt2(r.rebuild_effort ?? r.effort_score)}×</span></span>
+        <span>ROI <span class="pa">${fmtRoi(rebuildRoi(r))}</span></span>
         <span>Aud <span class="pa">${r.audience_factor != null ? Math.round(r.audience_factor * 100) + '%' : '—'}</span></span>
         <span>Lev <span class="lev">${fmt2(r.leverage)}×</span></span>
       </div>`;
@@ -961,6 +1051,115 @@ function renderCards() {
   }
 
   root.innerHTML = ''; root.appendChild(grid);
+}
+
+// =========================================================
+// Quadrant view (Leverage × iWAR triage matrix)
+// =========================================================
+const QUADRANTS = [
+  { id:'rebuild',  hi:'high', x:'low',  title:'REBUILD NOW',
+    color:'#dc2626', dot:'🔴',
+    desc:'High-leverage items below replacement. Biggest leverage on the portfolio. Sorted by Rebuild ROI.' },
+  { id:'protect',  hi:'high', x:'high', title:'PROTECT',
+    color:'#16a34a', dot:'🟢',
+    desc:'High-leverage items above replacement. Keep them, don\'t touch. Sorted by iWAR.' },
+  { id:'defer',    hi:'low',  x:'low',  title:'DEFER or CUT',
+    color:'#eab308', dot:'🟡',
+    desc:'Low-leverage items below replacement. Not worth a rebuild budget. Consider removing or replacing wholesale.' },
+  { id:'promote',  hi:'low',  x:'high', title:'PROMOTE / MOVE',
+    color:'#2563eb', dot:'🔵',
+    desc:'Low-leverage items above replacement. Strong content stuck in a low-leverage slot — relocate to a higher-leverage position if possible.' }
+];
+
+function quadrantBucket(r) {
+  const iwar = r.iwar ?? 0;
+  const lev = r.leverage ?? 1;
+  const hiLev = lev >= 1.0;
+  const hiIwar = iwar >= 0;
+  if (hiLev && !hiIwar) return 'rebuild';
+  if (hiLev && hiIwar)  return 'protect';
+  if (!hiLev && !hiIwar) return 'defer';
+  return 'promote';
+}
+
+function renderQuadrants(items, courseId) {
+  const root = $('root');
+  const courseName = KEY_FILE.courses[courseId]?.name || courseId;
+
+  const buckets = { rebuild:[], protect:[], defer:[], promote:[] };
+  for (const r of items) buckets[quadrantBucket(r)].push(r);
+
+  // sort within each bucket
+  buckets.rebuild.sort((a,b) => (rebuildRoi(b) ?? 0) - (rebuildRoi(a) ?? 0));
+  buckets.protect.sort((a,b) => (b.iwar ?? -999) - (a.iwar ?? -999));
+  buckets.defer.sort((a,b)   => (a.iwar ?? 999) - (b.iwar ?? 999));      // worst-first
+  buckets.promote.sort((a,b) => (b.iwar ?? -999) - (a.iwar ?? -999));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'quadrant-wrap';
+  wrap.innerHTML = `
+    <div class="qd-intro">
+      <div><strong>${escapeHtml(courseName)}</strong> — ${items.length} items split by Leverage (≥ 1.0× = high) and iWAR (≥ 0 = above replacement).</div>
+      <div class="qd-legend">A single score collapses four very different actions into one number. The split keeps them visible.</div>
+    </div>
+    <div class="qd-grid">
+      <div class="qd-corner"></div>
+      <div class="qd-col-hdr"><div class="qd-axis">Low iWAR</div><div class="qd-sub">item is weak (below replacement)</div></div>
+      <div class="qd-col-hdr"><div class="qd-axis">High iWAR</div><div class="qd-sub">item is strong (above replacement)</div></div>
+
+      <div class="qd-row-hdr"><div class="qd-axis">High Leverage</div><div class="qd-sub">C1, pre-paywall, early items</div></div>
+      ${quadrantCellHtml(QUADRANTS[0], buckets.rebuild)}
+      ${quadrantCellHtml(QUADRANTS[1], buckets.protect)}
+
+      <div class="qd-row-hdr"><div class="qd-axis">Low Leverage</div><div class="qd-sub">later weeks, optional, post-paywall</div></div>
+      ${quadrantCellHtml(QUADRANTS[2], buckets.defer)}
+      ${quadrantCellHtml(QUADRANTS[3], buckets.promote)}
+    </div>
+  `;
+
+  root.innerHTML = '';
+  root.appendChild(wrap);
+
+  // wire row clicks to openDetail
+  for (const row of wrap.querySelectorAll('.qd-row')) {
+    const id = row.dataset.itemId;
+    const r = items.find(x => x.anon_item_id === id);
+    if (r) row.addEventListener('click', () => openDetail(r));
+  }
+}
+
+function quadrantCellHtml(meta, list) {
+  const rows = list.length === 0
+    ? '<div class="qd-empty">No items here.</div>'
+    : list.map(r => {
+        const itemName = KEY_FILE.items[r.anon_item_id]?.name || r.anon_item_id;
+        const tierClass = TIER_INFO[r.tier]?.color || 'neutral';
+        const secondary = meta.id === 'rebuild'
+          ? `ROI ${fmtRoi(rebuildRoi(r))} · Eff ${fmt2(r.rebuild_effort ?? r.effort_score)}×`
+          : meta.id === 'promote'
+            ? `Lev ${fmt2(r.leverage)}× · pos ${r.item_global_order ?? '?'}/${r.n_items_in_course ?? '?'}`
+            : meta.id === 'protect'
+              ? `Lev ${fmt2(r.leverage)}× · ${r.tier}`
+              : `Eff ${fmt2(r.rebuild_effort ?? r.effort_score)}× · pos ${r.item_global_order ?? '?'}/${r.n_items_in_course ?? '?'}`;
+        return `
+          <div class="qd-row" data-item-id="${escapeHtml(r.anon_item_id)}">
+            <div class="qd-row-type type-${r.type_id || ''}" title="${escapeHtml(TYPE_LABELS[r.type_id] || 'Item')}">${(TYPE_LABELS[r.type_id]||'?')[0]}</div>
+            <div class="qd-row-main">
+              <div class="qd-row-name">${escapeHtml(itemName)}</div>
+              <div class="qd-row-meta">${escapeHtml(TYPE_LABELS[r.type_id] || 'Item')} · ${secondary}</div>
+            </div>
+            <div class="qd-row-iwar ${tierClass}">${fmtIwar(r.iwar)}</div>
+          </div>`;
+      }).join('');
+  return `
+    <div class="qd-cell qd-${meta.id}" style="--qd-color:${meta.color}">
+      <div class="qd-cell-hdr">
+        <div class="qd-cell-title">${meta.dot} ${meta.title}</div>
+        <div class="qd-cell-count">${list.length} item${list.length===1?'':'s'}</div>
+      </div>
+      <div class="qd-cell-desc">${meta.desc}</div>
+      <div class="qd-rows">${rows}</div>
+    </div>`;
 }
 
 // =========================================================
@@ -989,6 +1188,7 @@ function openDetail(r) {
   $('bf-cp').textContent = fmtPlus(r.cp_plus);
   $('bf-cr').textContent = fmtPlus(r.cr_plus);
   $('bf-effort').textContent = fmt2(r.rebuild_effort ?? r.effort_score) + '×';
+  $('bf-roi').textContent = fmtRoi(rebuildRoi(r));
   $('bf-audience').textContent = r.audience_factor != null ? Math.round(r.audience_factor * 100) + '%' : '—';
   $('bf-lev').textContent = fmt2(r.leverage) + '×';
   $('bf-lev-badge').textContent = `LEV ${fmt2(r.leverage)}×`;
@@ -1016,6 +1216,7 @@ function openDetail(r) {
     <br>
     <em>Triage context (not in iWAR):</em><br>
     Effort to rebuild = ${fmt2(r.rebuild_effort ?? r.effort_score)}× (reading = 1×)<br>
+    Rebuild ROI = max(0, 1 − ${fmtIwar(r.iwar)}) / ${fmt2(r.rebuild_effort ?? r.effort_score)}× = <strong>${fmtRoi(rebuildRoi(r))}</strong><br>
     Audience reach = ${r.audience_factor != null ? Math.round(r.audience_factor * 100) + '% of course max' : '—'}`;
   $('bf-calc').innerHTML = calc;
 
@@ -1128,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('course-select').addEventListener('change', renderCards);
   $('type-select').addEventListener('change', renderCards);
   $('sort-select').addEventListener('change', renderCards);
+  $('view-select').addEventListener('change', renderCards);
 
   // Detail + tour
   $('close-detail').addEventListener('click', closeDetail);
