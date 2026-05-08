@@ -387,6 +387,21 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
   <button class="dismiss" id="banner-dismiss" title="Dismiss this session">×</button>
 </div>
 
+<!-- ============ SIGN-IN GATE ============ -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<div class="onboard hidden" id="signin-gate" style="z-index:1000">
+  <div class="onboard-card" style="max-width:480px;text-align:center">
+    <div class="logo">⚾ iWAR</div>
+    <h1>Sign in to continue</h1>
+    <p class="sub">Access is limited to <strong>@coursera.org</strong> Google accounts.</p>
+    <div id="g-signin" style="display:flex;justify-content:center;margin:24px 0"></div>
+    <div id="signin-err" style="display:none;color:#fca5a5;font-size:12px;text-align:left;background:#3b1d1d;border:1px solid #7f1d1d;border-radius:6px;padding:10px 14px;line-height:1.5"></div>
+    <div style="margin-top:18px;font-size:11px;color:var(--mgrey);line-height:1.5">
+      Your email is checked client-side and stored in your browser only. Sign-in does not unlock the data — you still paste your <code>iwar_key.json</code> on the next screen.
+    </div>
+  </div>
+</div>
+
 <!-- ============ ONBOARDING OVERLAY ============ -->
 <div class="onboard hidden" id="onboard">
   <div class="onboard-card">
@@ -543,6 +558,88 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
 </div>
 
 <script>
+// =========================================================
+// Sign-in gate (soft, client-side @coursera.org check)
+// =========================================================
+// To enable real Google Sign-In, create an OAuth 2.0 Client ID at
+//   https://console.cloud.google.com/apis/credentials
+// (Application type: Web application; Authorized JavaScript origins:
+//   https://agenesir-coursera.github.io)
+// then paste the client ID here:
+const GOOGLE_CLIENT_ID = '__REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID__.apps.googleusercontent.com';
+const ALLOWED_DOMAIN = 'coursera.org';
+const AUTHED_EMAIL_KEY = 'iwar_authed_email_v1';
+
+function decodeJwt(token) {
+  const payload = token.split('.')[1];
+  return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+}
+function isAuthed() {
+  const email = localStorage.getItem(AUTHED_EMAIL_KEY);
+  return email && email.toLowerCase().endsWith('@' + ALLOWED_DOMAIN);
+}
+function signOut() {
+  localStorage.removeItem(AUTHED_EMAIL_KEY);
+  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+  location.reload();
+}
+function showSignedInBadge(email) {
+  const actions = document.querySelector('header .actions');
+  if (!actions || actions.querySelector('.signed-in-pill')) return;
+  const pill = document.createElement('span');
+  pill.className = 'status-pill signed-in-pill';
+  pill.style.cssText = 'background:#1a3a52;color:#7dd3fc;cursor:pointer';
+  pill.title = email + ' · click to sign out';
+  pill.textContent = email.split('@')[0];
+  pill.addEventListener('click', signOut);
+  actions.insertBefore(pill, actions.firstChild);
+}
+window.handleGoogleCredential = function(resp) {
+  const errEl = document.getElementById('signin-err');
+  try {
+    const payload = decodeJwt(resp.credential);
+    const email = (payload.email || '').toLowerCase();
+    if (!payload.email_verified) {
+      errEl.textContent = 'Email not verified by Google.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (payload.hd !== ALLOWED_DOMAIN && !email.endsWith('@' + ALLOWED_DOMAIN)) {
+      errEl.textContent = `Access is restricted to @${ALLOWED_DOMAIN} Google accounts. Signed in as: ${email}`;
+      errEl.style.display = 'block';
+      return;
+    }
+    localStorage.setItem(AUTHED_EMAIL_KEY, email);
+    document.getElementById('signin-gate').classList.add('hidden');
+    showSignedInBadge(email);
+    maybeShowOnboarding();
+  } catch (e) {
+    errEl.textContent = 'Sign-in failed: ' + e.message;
+    errEl.style.display = 'block';
+  }
+};
+function initGoogleSignIn() {
+  if (!window.google?.accounts?.id) { setTimeout(initGoogleSignIn, 200); return; }
+  if (GOOGLE_CLIENT_ID.startsWith('__REPLACE')) {
+    const errEl = document.getElementById('signin-err');
+    errEl.innerHTML = '<b>Setup needed:</b> the site\'s GOOGLE_CLIENT_ID is not configured yet. Create an OAuth 2.0 Client ID in Google Cloud Console and replace the placeholder in <code>index.html</code>.';
+    errEl.style.display = 'block';
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: window.handleGoogleCredential,
+    hd: ALLOWED_DOMAIN,
+    auto_select: true,
+    use_fedcm_for_prompt: true
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('g-signin'),
+    { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' }
+  );
+  google.accounts.id.prompt();
+}
+
 // =========================================================
 // State
 // =========================================================
@@ -1056,7 +1153,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Boot
   setLocked(true);
-  maybeShowOnboarding();
+  if (isAuthed()) {
+    $('signin-gate').classList.add('hidden');
+    showSignedInBadge(localStorage.getItem(AUTHED_EMAIL_KEY));
+    maybeShowOnboarding();
+  } else {
+    $('signin-gate').classList.remove('hidden');
+    initGoogleSignIn();
+  }
 });
 </script>
 </body>
