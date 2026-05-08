@@ -349,6 +349,11 @@ main{padding:20px 24px 40px;max-width:1800px;margin:0 auto}
 .tour .formula-mini{font-family:"SF Mono","Menlo",monospace;font-size:12px;background:#0d1117;border-left:3px solid var(--gold);padding:10px 14px;border-radius:6px;color:#cbd5e1;margin:8px 0;line-height:1.6}
 .tour .formula-mini .h{color:var(--gold)}
 .tour .formula-mini .t{color:var(--teal)}
+.tour .questions-block{margin-top:14px;padding:12px 14px;border:1px solid #2c3447;border-radius:8px;background:rgba(212,175,55,.04)}
+.tour .questions-title{font-size:10px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;font-weight:700;margin-bottom:8px}
+.tour .questions-block ul{list-style:none;padding:0;margin:0}
+.tour .questions-block li{font-size:13px;line-height:1.5;color:#e2e8f0;padding:5px 0 5px 18px;position:relative}
+.tour .questions-block li:before{content:"?";position:absolute;left:0;top:5px;color:var(--gold);font-weight:800;font-family:"SF Mono","Menlo",monospace}
 .tour .controls-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center}
 .tour .progress{display:flex;gap:5px;align-items:center;margin-left:auto;font-size:11px;color:var(--mgrey)}
 .tour .dot{width:8px;height:8px;border-radius:50%;background:#2c3447;transition:background .2s}
@@ -498,7 +503,8 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
             </div>
           </div>
           <div class="card-footer">
-            <div class="pos-adj hot" data-zone="posadj">PosAdj <span class="num" id="bf-posadj"></span></div>
+            <div class="pos-adj hot" data-zone="effort">Effort <span class="num" id="bf-effort"></span></div>
+            <div class="pos-adj hot" data-zone="audience">Audience <span class="num" id="bf-audience"></span></div>
             <div class="lev hot" data-zone="leverage">Leverage <span class="num" id="bf-lev"></span></div>
           </div>
         </div>
@@ -508,8 +514,10 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
             <span class="val">iWAR</span> = [(<span class="var">FP+</span> − 100) × w<sub>FP</sub><br>
             &nbsp;&nbsp;&nbsp;&nbsp;+ (<span class="var">RE+</span> − 100) × w<sub>RE</sub><br>
             &nbsp;&nbsp;&nbsp;&nbsp;+ (<span class="var">CP+</span> − 100) × w<sub>CP</sub><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;− (<span class="var">CR+</span> − 100) × w<sub>CR</sub><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;+ <span class="var">PosAdj</span>] × <span class="var">Leverage</span>
+            &nbsp;&nbsp;&nbsp;&nbsp;− (<span class="var">CR+</span> − 100) × w<sub>CR</sub>] × <span class="var">Leverage</span>
+            <div style="margin-top:10px;font-size:11px;color:var(--mgrey)">
+              <span class="var">Effort</span> and <span class="var">Audience</span> are shown alongside iWAR but <em>not</em> mixed into the score — use them for triage decisions (rebuild cost vs. reach).
+            </div>
           </div>
           <div class="calc" id="bf-calc"></div>
           <div style="margin-top:auto;font-size:10px;color:var(--mgrey);font-style:italic;border-top:1px solid #2c3447;padding-top:10px">
@@ -524,6 +532,7 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
       <p id="t-body"></p>
       <p id="t-body2"></p>
       <div id="t-formula"></div>
+      <div id="t-questions"></div>
       <div class="controls-row">
         <button class="btn" id="t-next">Take the tour →</button>
         <button class="btn ghost" id="t-flip">Flip card</button>
@@ -581,34 +590,83 @@ const TIER_INFO = {
 const TOUR = [
   { zone:'header', title:'Player · position · team',
     body:'Each card represents <strong>one specific item inside a course</strong>: a lecture video, a reading, a lab, a peer-reviewed assignment.',
-    body2:'<strong>Position</strong> = item type. Different types have different difficulty + scarcity, like baseball positions.<br><strong>Team</strong> = the course it sits in. Course position determines its leverage.' },
+    body2:'<strong>Position</strong> = item type. Different types have different difficulty + scarcity, like baseball positions.<br><strong>Team</strong> = the course it sits in. Course position determines its leverage.',
+    questions:[
+      'What item am I looking at, and what type is it?',
+      'Which course and specialization does it live in?',
+      'Is it before or after the paywall?'
+    ] },
   { zone:'iwar', title:'iWAR · the headline number',
     body:'<strong>Item Wins Above Replacement.</strong> One number summarizing the item\'s value above a "freely available" replacement-level item of its type.',
-    body2:'<strong>Tier system:</strong> ≥ +5 MVP, ≥ +3 All-Star, ≥ +1 Starter, −1 to +1 Replacement, ≤ −1 Below Replacement (rebuild candidate).' },
+    body2:'<strong>Tier system:</strong> ≥ +5 MVP, ≥ +3 All-Star, ≥ +1 Starter, −1 to +1 Replacement, ≤ −1 Below Replacement (rebuild candidate).',
+    questions:[
+      'Is this item adding value or dragging the course down?',
+      'Should it be kept, rebuilt, or cut?',
+      'How does it stack up against the rest of the portfolio?'
+    ] },
   { zone:'fp', title:'FP+ · Forward Pull',
     body:'Like baseball\'s <strong>wRC+</strong>: 100 = type baseline. >100 better, <100 worse.',
     body2:'Among learners who reach this item, <strong>what percent complete the next item within 7 days?</strong> Normalized against peers in the same (type × position) cell.',
-    formula:'<div class="formula-mini"><span class="t">FP+</span> = 100 × (FP<sub>item</sub> / FP<sub>type×position-avg</sub>)</div>' },
+    formula:'<div class="formula-mini"><span class="t">FP+</span> = 100 × (FP<sub>item</sub> / FP<sub>type×position-avg</sub>)</div>',
+    questions:[
+      'After learners finish this item, do they keep going?',
+      'Is this item creating momentum or stalling it?',
+      'Is the engagement signal stronger or weaker than other items of its type at this position?'
+    ] },
   { zone:'re', title:'RE+ · Retention',
     body:'Defensive metric. Does this item plug drop-off?',
     body2:'1 minus the drop-off rate after this item, normalized against the cell baseline. A lab\'s 15% drop-off is fine (lab avg might be 18%); a reading\'s 15% drop-off is a disaster.',
-    formula:'<div class="formula-mini"><span class="t">RE+</span> = 100 × (1 − drop<sub>item</sub>) / (1 − drop<sub>type×position-avg</sub>)</div>' },
+    formula:'<div class="formula-mini"><span class="t">RE+</span> = 100 × (1 − drop<sub>item</sub>) / (1 − drop<sub>type×position-avg</sub>)</div>',
+    questions:[
+      'Is this item a leak or a plug in the funnel?',
+      'Does it hold learners better than peers of its type and position?',
+      'If I removed this item, would drop-off get worse — or improve?'
+    ] },
   { zone:'cp', title:'CP+ · Conversion Pull',
     body:'For pre-paywall items only. <strong>Did completing this item push the learner to convert to paid?</strong>',
     body2:'Normalized against pre-paywall peers of the same type. CP+ = 100 means this item converts at the type baseline; > 100 means it pulls conversion above expectation.',
-    formula:'<div class="formula-mini"><span class="t">CP+</span> = 100 × (paid_share<sub>item</sub> / paid_share<sub>type×position-avg</sub>)</div>' },
+    formula:'<div class="formula-mini"><span class="t">CP+</span> = 100 × (paid_share<sub>item</sub> / paid_share<sub>type×position-avg</sub>)</div>',
+    questions:[
+      'Is this pre-paywall item nudging free learners to pay?',
+      'Which items are punching above their weight on monetization?',
+      'If I have to cut content before the paywall, which items can I least afford to lose?'
+    ] },
   { zone:'cr', title:'CR+ · Churn Risk',
     body:'<strong>Subtracts from iWAR.</strong> The defensive bad side: was this item the last item completed before unenrollment?',
     body2:'High CR+ means this item is associated with abandonment. Distinct from RE+ which is about silent drop-off; CR+ is about active churn.',
-    formula:'<div class="formula-mini"><span class="t">CR+</span> = 100 × (churn_share<sub>item</sub> / churn_share<sub>type×position-avg</sub>)</div>' },
-  { zone:'posadj', title:'PosAdj · type intrinsic value',
-    body:'Like baseball\'s <strong>positional adjustment</strong>: catchers get +12.5 runs per 162 just for playing the position. Type-intrinsic value, separate from performance.',
-    body2:'Built from 5 inputs: build effort, scarcity in catalog, substitutability, mastery diagnostic, career-skill signal. Items unaligned to a learning objective get a 0.3× career-skill penalty.',
-    formula:'<div class="formula-mini"><span class="h">staffGraded</span> high &nbsp; <span class="h">labs/lti</span> high &nbsp; <span class="h">quiz</span> mid<br><span class="h">lecture</span> baseline &nbsp; <span class="h">reading</span> low</div>' },
+    formula:'<div class="formula-mini"><span class="t">CR+</span> = 100 × (churn_share<sub>item</sub> / churn_share<sub>type×position-avg</sub>)</div>',
+    questions:[
+      'Is this item the "exit door" — the last thing learners touch before unenrolling?',
+      'Is the churn pattern unusual for this type/position, or normal?',
+      'Does this item need a fix to prevent active drop-off (not just silent fade)?'
+    ] },
+  { zone:'effort', title:'Effort · rebuild cost',
+    body:'<strong>Decoupled from iWAR.</strong> Type-relative cost to rebuild this item, in "reading-equivalents" (reading = 1×).',
+    body2:'Lecture 7×, programming lab 25×, graded lab 15×, LTI 15×, peer review 8×, staffGraded 12×, quiz 4×, widget 10×, role play / dialog 4×, discussion 0.3×, coach 3×.<br>Use it as the denominator when prioritizing rebuilds: an item with iWAR = +5 at effort 1× beats iWAR = +6 at effort 25×.',
+    formula:'<div class="formula-mini"><span class="h">priority</span> ∝ |iWAR| / Effort &nbsp; (rebuild value per unit of work)</div>',
+    questions:[
+      'How expensive would it be to rebuild or replace this item?',
+      'What\'s the rebuild ROI (iWAR change per unit of work)?',
+      'Is this a quick win or a heavy lift?'
+    ] },
+  { zone:'audience', title:'Audience · reach factor',
+    body:'How big is the audience that actually sees this item? <strong>n_completers / max(n_completers) within the same course.</strong>',
+    body2:'1.0 = the most-completed item in the course; 0.4 = an item only 40% as many learners reach. Like Effort, it sits <em>next to</em> iWAR rather than inside it — a strong iWAR on an item only 5% of learners ever touch is a different bet than a strong iWAR on an item every learner sees.',
+    formula:'<div class="formula-mini"><span class="h">Audience</span> = n_completers<sub>item</sub> / max(n_completers)<sub>course</sub></div>',
+    questions:[
+      'How many learners actually see this item?',
+      'Is the iWAR signal big-reach or niche?',
+      'Is a fix here going to move the population, or just a tail of users?'
+    ] },
   { zone:'leverage', title:'Leverage · positional multiplier',
     body:'Same item, different position = different value. The first item of the entry course of a spec carries 2.25× leverage; an optional item in the last course carries 0.4×.',
     formula:'<div class="formula-mini"><span class="h">Leverage</span> = WithinCourseLev × WithinSpecLev<br>(C1-of-C1 = 1.5 × 1.5 = 2.25)</div>',
-    body2:'This is where iWAR moves the conversation from "all items are equal" to "this 13% C1 lecture is the single most valuable rebuild target in the portfolio."' }
+    body2:'This is where iWAR moves the conversation from "all items are equal" to "this 13% C1 lecture is the single most valuable rebuild target in the portfolio."',
+    questions:[
+      'How much does position amplify (or dampen) this item\'s impact?',
+      'Is this an early/critical slot or a late/optional one?',
+      'If I had to fix one item in the spec, does this item\'s position make it the right target?'
+    ] }
 ];
 
 // =========================================================
@@ -797,7 +855,8 @@ function renderCards() {
         <div class="stat"><div class="label">CR+</div><div class="num">${fmtPlus(r.cr_plus)}</div></div>
       </div></div>
       <div class="footer">
-        <span>PosAdj <span class="pa">${fmt2(r.posadj)}</span></span>
+        <span>Eff <span class="pa">${fmt2(r.rebuild_effort ?? r.effort_score)}×</span></span>
+        <span>Aud <span class="pa">${r.audience_factor != null ? Math.round(r.audience_factor * 100) + '%' : '—'}</span></span>
         <span>Lev <span class="lev">${fmt2(r.leverage)}×</span></span>
       </div>`;
     card.addEventListener('click', () => openDetail(r));
@@ -832,7 +891,8 @@ function openDetail(r) {
   $('bf-re').textContent = fmtPlus(r.re_plus);
   $('bf-cp').textContent = fmtPlus(r.cp_plus);
   $('bf-cr').textContent = fmtPlus(r.cr_plus);
-  $('bf-posadj').textContent = fmt2(r.posadj);
+  $('bf-effort').textContent = fmt2(r.rebuild_effort ?? r.effort_score) + '×';
+  $('bf-audience').textContent = r.audience_factor != null ? Math.round(r.audience_factor * 100) + '%' : '—';
   $('bf-lev').textContent = fmt2(r.leverage) + '×';
   $('bf-lev-badge').textContent = `LEV ${fmt2(r.leverage)}×`;
 
@@ -854,9 +914,12 @@ function openDetail(r) {
     (${fmtPlus(r.re_plus)} − 100) × w<sub>RE</sub> = ${(((r.re_plus ?? 100) - 100) * 0.05).toFixed(2)}<br>
     (${fmtPlus(r.cp_plus)} − 100) × w<sub>CP</sub> = ${(((r.cp_plus ?? 100) - 100) * 0.10).toFixed(2)}<br>
     − (${fmtPlus(r.cr_plus)} − 100) × w<sub>CR</sub> = ${(-((r.cr_plus ?? 100) - 100) * 0.10).toFixed(2)}<br>
-    PosAdj = ${fmt2(r.posadj)}<br>
     ─────────────<br>
-    Sum × Leverage ${fmt2(r.leverage)}× = <strong>${fmtIwar(r.iwar)}</strong>`;
+    Sum × Leverage ${fmt2(r.leverage)}× = <strong>${fmtIwar(r.iwar)}</strong><br>
+    <br>
+    <em>Triage context (not in iWAR):</em><br>
+    Effort to rebuild = ${fmt2(r.rebuild_effort ?? r.effort_score)}× (reading = 1×)<br>
+    Audience reach = ${r.audience_factor != null ? Math.round(r.audience_factor * 100) + '% of course max' : '—'}`;
   $('bf-calc').innerHTML = calc;
 
   // reset card and tour
@@ -875,13 +938,14 @@ function renderTour() {
   const stepEl = $('t-step'); const titleEl = $('t-title');
   const bodyEl = $('t-body'); const body2El = $('t-body2');
   const formulaEl = $('t-formula'); const dotsEl = $('t-dots');
+  const questionsEl = $('t-questions');
   const nextBtn = $('t-next');
 
   if (TOUR_IDX < 0) {
     stepEl.textContent = 'Click any region of the card';
     titleEl.textContent = 'Card breakdown';
-    bodyEl.innerHTML = 'Click any highlighted region of the card on the left to see what it means. Or hit <strong>Take the tour</strong> to walk through all eight components.';
-    body2El.innerHTML = ''; formulaEl.innerHTML = '';
+    bodyEl.innerHTML = 'Click any highlighted region of the card on the left to see what it means. Or hit <strong>Take the tour</strong> to walk through all nine components.';
+    body2El.innerHTML = ''; formulaEl.innerHTML = ''; questionsEl.innerHTML = '';
     nextBtn.textContent = 'Take the tour →';
   } else {
     const s = TOUR[TOUR_IDX];
@@ -890,6 +954,13 @@ function renderTour() {
     bodyEl.innerHTML = s.body;
     body2El.innerHTML = s.body2 || '';
     formulaEl.innerHTML = s.formula || '';
+    if (s.questions && s.questions.length) {
+      questionsEl.innerHTML = '<div class="questions-block"><div class="questions-title">Questions this answers on its own</div><ul>'
+        + s.questions.map(q => `<li>${q}</li>`).join('')
+        + '</ul></div>';
+    } else {
+      questionsEl.innerHTML = '';
+    }
     TOUR_VISITED.add(s.zone);
     nextBtn.textContent = TOUR_IDX < TOUR.length - 1 ? 'Next →' : 'Restart tour';
   }
