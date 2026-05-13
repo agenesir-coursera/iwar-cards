@@ -455,7 +455,7 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
   <div class="onboard-card" style="max-width:480px;text-align:center">
     <div class="logo">⚾ iWAR</div>
     <h1>Sign in to continue</h1>
-    <p class="sub">Access is limited to <strong>@coursera.org</strong> Google accounts.</p>
+    <p class="sub">Access is limited to <strong>@coursera.org</strong> and <strong>@cloud.coursera.com</strong> Google accounts.</p>
     <div id="g-signin" style="display:flex;justify-content:center;margin:24px 0"></div>
     <div id="signin-err" style="display:none;color:#fca5a5;font-size:12px;text-align:left;background:#3b1d1d;border:1px solid #7f1d1d;border-radius:6px;padding:10px 14px;line-height:1.5"></div>
     <div style="margin-top:18px;font-size:11px;color:var(--mgrey);line-height:1.5">
@@ -628,7 +628,7 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
 
 <script>
 // =========================================================
-// Sign-in gate (soft, client-side @coursera.org check)
+// Sign-in gate (soft, client-side domain check)
 // =========================================================
 // To enable real Google Sign-In, create an OAuth 2.0 Client ID at
 //   https://console.cloud.google.com/apis/credentials
@@ -636,16 +636,21 @@ footer.page{margin-top:30px;padding:18px 28px;text-align:center;font-size:10px;c
 //   https://agenesir-coursera.github.io)
 // then paste the client ID here:
 const GOOGLE_CLIENT_ID = '272785607118-3gn3ag1v6s08hp2egcfgrddqh88id99s.apps.googleusercontent.com';
-const ALLOWED_DOMAIN = 'coursera.org';
+const ALLOWED_DOMAINS = ['coursera.org', 'cloud.coursera.com'];
 const AUTHED_EMAIL_KEY = 'iwar_authed_email_v1';
 
 function decodeJwt(token) {
   const payload = token.split('.')[1];
   return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
 }
+function emailMatchesAllowedDomain(email) {
+  if (!email) return false;
+  const e = email.toLowerCase();
+  return ALLOWED_DOMAINS.some(d => e.endsWith('@' + d));
+}
 function isAuthed() {
   const email = localStorage.getItem(AUTHED_EMAIL_KEY);
-  return email && email.toLowerCase().endsWith('@' + ALLOWED_DOMAIN);
+  return emailMatchesAllowedDomain(email);
 }
 function signOut() {
   localStorage.removeItem(AUTHED_EMAIL_KEY);
@@ -673,8 +678,9 @@ window.handleGoogleCredential = function(resp) {
       errEl.style.display = 'block';
       return;
     }
-    if (payload.hd !== ALLOWED_DOMAIN && !email.endsWith('@' + ALLOWED_DOMAIN)) {
-      errEl.textContent = `Access is restricted to @${ALLOWED_DOMAIN} Google accounts. Signed in as: ${email}`;
+    const hdAllowed = payload.hd && ALLOWED_DOMAINS.includes(payload.hd);
+    if (!hdAllowed && !emailMatchesAllowedDomain(email)) {
+      errEl.textContent = `Access is restricted to ${ALLOWED_DOMAINS.map(d => '@' + d).join(' or ')} Google accounts. Signed in as: ${email}`;
       errEl.style.display = 'block';
       return;
     }
@@ -698,7 +704,8 @@ function initGoogleSignIn() {
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: window.handleGoogleCredential,
-    hd: ALLOWED_DOMAIN,
+    // No `hd:` hint — Google's `hd` parameter only supports a single domain.
+    // We allow multiple domains and enforce the check post-OAuth in the callback.
     auto_select: true,
     use_fedcm_for_prompt: true
   });
